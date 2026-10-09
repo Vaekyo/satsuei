@@ -873,8 +873,24 @@
     return strip(rg);
   }
 
+  /**
+   * Deterministic sample of core pixels (alpha >= coreAlpha) of a straight buffer,
+   * for the transfer solver: { r, g, b, w } (at most n entries).
+   */
+  function charSamples(buf, coreAlpha, n) {
+    var idx = [], i, k, s = { r: [], g: [], b: [], w: [] }, step, j;
+    for (i = 0; i < buf.w * buf.h; i++) { if (buf.a[i] >= coreAlpha) { idx.push(i); } }
+    step = Math.max(1, idx.length / n);
+    for (k = 0; k < idx.length; k += step) {
+      j = idx[Math.floor(k)];
+      s.r.push(buf.r[j]); s.g.push(buf.g[j]); s.b.push(buf.b[j]); s.w.push(1);
+    }
+    return s;
+  }
+
   return {
     DEFAULTS: DEFAULTS,
+    charSamples: charSamples,
     prepare: prepare,
     coreWeights: coreWeights,
     onesWeights: onesWeights,

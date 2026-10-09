@@ -62,10 +62,10 @@ node tools/sim_preview.js                       # simulated match contact sheets
 ## Conventions (Node tooling)
 
 - Node ≥ 20, CommonJS, `node:test`. No new runtime deps for end users. Dev deps OK.
-- When writing files through a heredoc, don't put literal `\uXXXX` escapes in the
-  heredoc: the tooling in this environment has turned them into raw characters
-  before. Write them from Python with `chr(92) + "u…"`, or check with
-  `grep -P '[^\x00-\x7F]'` afterwards.
+- **Agent tooling gotcha:** literal `\uXXXX` escapes written through the file-write
+  tool or a heredoc have come out as the raw characters (seen twice). For any
+  `\u` escape in `src/`, write it from Python using `chr(92) + "u…"`, then run
+  `LC_ALL=C grep -rnP '[^\x00-\x7F]' src` (the ASCII test in `npm test` also catches it).
 
 ## Math conventions
 

@@ -119,17 +119,9 @@ function analysisPasses(bgCanvas, placedChars, maxSide) {
   return { bg: toBuffer(bg), chars, comp: toBuffer(downscaleTo(comp, maxSide)) };
 }
 
-/** Deterministic core-pixel sample of a straight buffer for the transfer solver. */
+/** Deterministic core-pixel sample (same code path as AE: src/core/stats.charSamples). */
 function charSamples(buf, coreAlpha, n) {
-  const idx = [];
-  for (let i = 0; i < buf.w * buf.h; i++) if (buf.a[i] >= coreAlpha) idx.push(i);
-  const step = Math.max(1, idx.length / n);
-  const s = { r: [], g: [], b: [], w: [] };
-  for (let k = 0; k < idx.length; k += step) {
-    const i = idx[Math.floor(k)];
-    s.r.push(buf.r[i]); s.g.push(buf.g[i]); s.b.push(buf.b[i]); s.w.push(1);
-  }
-  return s;
+  return require("../../src/core/stats.js").charSamples(buf, coreAlpha, n);
 }
 
 module.exports = { ROOT, DEFAULTS, loadCanvas, placeLayer, defaultPlacement, downscaleTo, toBuffer, fromBuffer, analysisPasses, charSamples };

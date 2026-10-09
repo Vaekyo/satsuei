@@ -14,6 +14,9 @@
 //@include "core/transfer.js"
 //@include "core/classify.js"
 //@include "ae/env.js"
+//@include "ae/util.js"
+//@include "ae/roles.js"
+//@include "ae/analyze.js"
 
 (function () {
   var S = $.global.SATSUEI;

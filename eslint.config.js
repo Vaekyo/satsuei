@@ -24,7 +24,8 @@ const extendscriptGlobals = {
   LayerQuality: "readonly", ParagraphJustification: "readonly", AutoOrientType: "readonly",
   RQItemStatus: "readonly", GetSettingsFormat: "readonly", PostRenderAction: "readonly",
   FrameBlendingType: "readonly", ResolveType: "readonly", TimeDisplayType: "readonly",
-  ToolType: "readonly", PREFType: "readonly", PurposeFlag: "readonly",
+  ToolType: "readonly", PREFType: "readonly", PurposeFlag: "readonly", AlphaMode: "readonly",
+  BlendingMode2: "readonly", LayerSamplingQuality: "readonly",
   // UMD wrapper of src/core lets Node require() the same files.
   module: "readonly", require: "readonly",
   SATSUEI: "writable"
