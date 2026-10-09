@@ -100,5 +100,16 @@
     return { cls: best, confidence: conf, scores: s, features: f };
   }
 
-  return { CLASSES: CLASSES, features: features, score: score, classify: classify, classifyFeatures: classifyFeatures };
+  /**
+   * Per-class module strengths from config.classes (column order in config.classes._columns).
+   * Returns { wb, lift, harmony, sat, para, rim, wrap, diffusion, look }.
+   */
+  function classDefaults(cls, config) {
+    var row = config.classes[cls] || config.classes.DAY;
+    var cols = config.classes._columns, out = {}, i;
+    for (i = 0; i < cols.length; i++) { out[cols[i]] = row[i]; }
+    return out;
+  }
+
+  return { CLASSES: CLASSES, features: features, score: score, classify: classify, classifyFeatures: classifyFeatures, classDefaults: classDefaults };
 }));

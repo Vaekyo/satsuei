@@ -2,7 +2,11 @@
   "version": 1,
   "analysis": {
     "maxSide": 384,
-    "qualities": [256, 384, 640],
+    "qualities": [
+      256,
+      384,
+      640
+    ],
     "ringFrac": 0.08,
     "coreAlpha": 0.95,
     "bins": 1024,
@@ -10,28 +14,28 @@
     "kmeansSamples": 4096,
     "k": 5,
     "seed": 12345,
-    "charSamples": 4096
+    "charSamples": 4096,
+    "illumKeyBlend": 0.7
   },
   "transfer": {
     "ringIllumMix": 0.5,
-    "maxIllumChroma": 0.12,
+    "maxIllumChroma": 0.08,
     "charIllumTrust": 0.3,
     "maxWbStops": 1.5,
     "kExposure": 0.6,
-    "yRef": 0.12,
+    "yRef": 0.18,
     "evMin": -2.5,
-    "evMax": 1.0,
+    "evMax": 0.3,
     "liftCap": 0.2,
-    "lineMargin": 0.12,
     "midTintScale": 0.6,
-    "maxMidTint": 0.03,
+    "maxMidTint": 0.02,
     "highTintScale": 0.5,
     "minGain": 0.85,
     "gammaMin": 0.75,
     "gammaMax": 1.35,
-    "rho": 1.15,
-    "satMin": 0.6,
-    "satMax": 1.2,
+    "rho": 1.4,
+    "satMin": 0.75,
+    "satMax": 1.15,
     "classSatWeight": 0.5,
     "contrastExp": 0.25,
     "contrastMin": 0.85,
@@ -39,29 +43,194 @@
     "mklEps": 0.0001,
     "mklMaxGain": 2.0,
     "clipP99": 0.985,
-    "readabilityMin": 0.08
+    "readabilityMin": 0.08,
+    "clipMaxIncrease": 0.005,
+    "skinMaxHueShift": 25,
+    "skinMinChromaRatio": 0.8,
+    "skinMaxChromaRatio": 2.0,
+    "lineContrastKeep": 0.6
   },
   "classifier": {
     "minScore": 0.15
   },
   "classes": {
-    "_columns": ["wb", "lift", "harmony", "sat", "para", "rim", "wrap", "diffusion", "look"],
-    "DAY":            [0.50, 0.25, 0.15, 1.00, 0.25, 0.20, 0.25, 0.12, "hare"],
-    "GOLDEN":         [0.75, 0.45, 0.25, 1.05, 0.45, 0.50, 0.40, 0.30, "yuuyake"],
-    "TWILIGHT":       [0.70, 0.50, 0.30, 0.85, 0.35, 0.35, 0.30, 0.20, "tasogare"],
-    "NIGHT":          [0.85, 0.60, 0.30, 0.75, 0.35, 0.40, 0.30, 0.25, "yoru"],
-    "NEON":           [0.60, 0.50, 0.35, 1.10, 0.30, 0.60, 0.50, 0.40, "neon"],
-    "OVERCAST":       [0.60, 0.35, 0.20, 0.80, 0.15, 0.10, 0.15, 0.10, "ame"],
-    "SNOW":           [0.60, 0.30, 0.20, 0.85, 0.20, 0.20, 0.35, 0.20, "fuyu"],
-    "INTERIOR_WARM":  [0.60, 0.35, 0.20, 0.95, 0.30, 0.25, 0.20, 0.12, "shitsunai"],
-    "FIRE":           [0.80, 0.50, 0.30, 1.00, 0.50, 0.60, 0.40, 0.30, "honoo"],
-    "UNDERWATER":     [0.80, 0.50, 0.35, 0.85, 0.30, 0.20, 0.30, 0.30, "suichuu"],
-    "FLASHBACK_MONO": [0.30, 0.20, 0.50, 0.50, 0.15, 0.10, 0.20, 0.35, "kaisou"],
-    "VOID_BLACK":     [0.20, 0.10, 0.00, 1.00, 0.10, 0.50, 0.00, 0.15, null],
-    "VOID_WHITE":     [0.20, 0.00, 0.00, 1.00, 0.10, 0.10, 0.30, 0.20, null]
+    "_columns": [
+      "wb",
+      "lift",
+      "harmony",
+      "sat",
+      "para",
+      "rim",
+      "wrap",
+      "diffusion",
+      "look"
+    ],
+    "DAY": [
+      0.5,
+      0.25,
+      0.15,
+      1.0,
+      0.25,
+      0.2,
+      0.25,
+      0.12,
+      "hare"
+    ],
+    "GOLDEN": [
+      0.75,
+      0.45,
+      0.25,
+      1.05,
+      0.45,
+      0.5,
+      0.4,
+      0.3,
+      "yuuyake"
+    ],
+    "TWILIGHT": [
+      0.7,
+      0.5,
+      0.3,
+      0.85,
+      0.35,
+      0.35,
+      0.3,
+      0.2,
+      "tasogare"
+    ],
+    "NIGHT": [
+      0.85,
+      0.6,
+      0.3,
+      0.75,
+      0.35,
+      0.4,
+      0.3,
+      0.25,
+      "yoru"
+    ],
+    "NEON": [
+      0.6,
+      0.5,
+      0.35,
+      1.1,
+      0.3,
+      0.6,
+      0.5,
+      0.4,
+      "neon"
+    ],
+    "OVERCAST": [
+      0.6,
+      0.35,
+      0.2,
+      0.8,
+      0.15,
+      0.1,
+      0.15,
+      0.1,
+      "ame"
+    ],
+    "SNOW": [
+      0.6,
+      0.3,
+      0.2,
+      0.85,
+      0.2,
+      0.2,
+      0.35,
+      0.2,
+      "fuyu"
+    ],
+    "INTERIOR_WARM": [
+      0.6,
+      0.35,
+      0.2,
+      0.95,
+      0.3,
+      0.25,
+      0.2,
+      0.12,
+      "shitsunai"
+    ],
+    "FIRE": [
+      0.8,
+      0.5,
+      0.3,
+      1.0,
+      0.5,
+      0.6,
+      0.4,
+      0.3,
+      "honoo"
+    ],
+    "UNDERWATER": [
+      0.8,
+      0.5,
+      0.35,
+      0.85,
+      0.3,
+      0.2,
+      0.3,
+      0.3,
+      "suichuu"
+    ],
+    "FLASHBACK_MONO": [
+      0.3,
+      0.2,
+      0.5,
+      0.5,
+      0.15,
+      0.1,
+      0.2,
+      0.35,
+      "kaisou"
+    ],
+    "VOID_BLACK": [
+      0.2,
+      0.1,
+      0.0,
+      1.0,
+      0.1,
+      0.5,
+      0.0,
+      0.15,
+      null
+    ],
+    "VOID_WHITE": [
+      0.2,
+      0.0,
+      0.0,
+      1.0,
+      0.1,
+      0.1,
+      0.3,
+      0.2,
+      null
+    ]
   },
   "classExtras": {
-    "FIRE": { "liveAmbient": true }
+    "_doc": "Per-class overrides: 'ev' multiplies the Exposure Match strength; 'transfer' overrides config.transfer for that class.",
+    "FIRE": {
+      "liveAmbient": true
+    },
+    "VOID_BLACK": {
+      "ev": 0
+    },
+    "VOID_WHITE": {
+      "ev": 0
+    },
+    "UNDERWATER": {
+      "transfer": {
+        "skinMaxHueShift": 40,
+        "skinMinChromaRatio": 0.5
+      }
+    },
+    "FLASHBACK_MONO": {
+      "transfer": {
+        "skinMinChromaRatio": 0.3
+      }
+    }
   },
   "match": {
     "masterStrength": 0.7,

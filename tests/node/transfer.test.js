@@ -89,7 +89,10 @@ function charLike(samples) {
 test("solver: neutral mid-grey scene gives (near) identity", () => {
   const samples = randomSet(3000, [0.6, 0.55, 0.5], [0.5, 0.5, 0.5], 6);
   const cov = T.describe(samples).cov;
-  const bg = { global: regionLike([0.6, 0.55, 0.5], cov, 0.12, [0, 0, 0], [1, 1, 1], [1, 1, 1], [0.6, 0, 0], T.describe(samples).meanChroma / 1.15), ring: null };
+  const d = T.describe(samples);
+  const g = regionLike([0.6, 0.55, 0.5], cov, T.DEFAULTS.yRef, [0, 0, 0], [1, 1, 1], [1, 1, 1], [0.6, 0, 0], d.meanChroma);
+  g.meanRelChroma = d.meanRelChroma / T.DEFAULTS.rho;
+  const bg = { global: g, ring: null };
   const r = T.solve(bg, charLike(samples), samples, {});
   for (let c = 0; c < 3; c++) near(r.params.wbStops[c], 0, 1e-6, "wb");
   near(r.params.ev, 0, 1e-6, "ev");
@@ -100,7 +103,9 @@ test("solver: warm dim scene -> warm WB, negative EV, lifted navy blacks guarded
   const samples = randomSet(3000, [0.6, 0.55, 0.5], [0.5, 0.5, 0.5], 7);
   const cov = L.scale3(T.describe(samples).cov, 0.3);
   const warm = C.cctToLinear(3000);
-  const bg = { global: regionLike([0.3, 0.25, 0.3], cov, 0.02, [0.05, 0.06, 0.25], warm, warm, [0.3, 0.0, -0.05], 0.05), ring: null };
+  const g = regionLike([0.3, 0.25, 0.3], cov, 0.02, [0.05, 0.06, 0.25], warm, warm, [0.3, 0.0, -0.05], 0.05);
+  g.meanRelChroma = 0.05;
+  const bg = { global: g, ring: null };
   const r = T.solve(bg, charLike(samples), samples, {});
   assert.ok(r.params.wbStops[0] > 0.1 && r.params.wbStops[2] < -0.1, `warm WB ${r.params.wbStops}`);
   assert.ok(r.params.ev < -0.5, `night EV ${r.params.ev}`);

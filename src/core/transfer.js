@@ -18,24 +18,24 @@
 }(function (C, L, FX) {
   var DEFAULTS = {
     ringIllumMix: 0.5,      // E_bg = lerp(global, ring) illuminant
-    maxIllumChroma: 0.12,   // cap Oklab chroma of E_bg (strong casts come from scene colors)
+    maxIllumChroma: 0.08,   // cap Oklab chroma of E_bg (strong casts come from scene colors)
     charIllumTrust: 0.3,    // E_char = lerp(neutral, measured, trust)
     maxWbStops: 1.5,
     kExposure: 0.6,
-    yRef: 0.12,             // linear ring median luminance that needs no exposure change
+    yRef: 0.18,             // linear ring median luminance that needs no exposure change
     evMin: -2.5,
-    evMax: 1.0,
+    evMax: 0.3,
     liftCap: 0.2,
-    lineMargin: 0.12,       // Oklab L: lifted line art stays this much below p20 of fills
+    lineContrastKeep: 0.6,  // lifted line art keeps >= 60% of its lightness gap to dark fills (p20)
     midTintScale: 0.6,
-    maxMidTint: 0.03,       // Oklab chroma cap of the midtone residual tint
+    maxMidTint: 0.02,       // Oklab chroma cap of the midtone residual tint
     highTintScale: 0.5,
     minGain: 0.85,
     gammaMin: 0.75,
     gammaMax: 1.35,
-    rho: 1.15,              // characters may be a little more saturated than the ring
-    satMin: 0.6,
-    satMax: 1.2,
+    rho: 1.4,              // characters may be a little more saturated than the ring
+    satMin: 0.75,
+    satMax: 1.15,
     classSatWeight: 0.5,    // log-blend of measured saturation scale with the class prior
     contrastExp: 0.25,
     contrastMin: 0.85,
@@ -43,6 +43,10 @@
     mklEps: 1e-4,
     mklMaxGain: 2.0,        // clamp eigenvalues of T into [1/g, g]
     clipP99: 0.985,
+    clipMaxIncrease: 0.005, // max new per-channel clipping (fraction of character pixels)
+    skinMaxHueShift: 25,    // degrees (Oklab hue) the skin may rotate
+    skinMinChromaRatio: 0.8,
+    skinMaxChromaRatio: 2.0,
     readabilityMin: 0.08    // Oklab L contrast between edge band and ring
   };
 
@@ -68,7 +72,7 @@
   function describe(s) {
     var n = s.r.length, sw = 0, m = [0, 0, 0], i, w, d0, d1, d2, lab, cs = 0;
     var cv = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    var Ls = [], lumas = [], labSum = [0, 0, 0];
+    var Ls = [], lumas = [], labSum = [0, 0, 0], rcs = 0;
     for (i = 0; i < n; i++) {
       w = s.w ? s.w[i] : 1;
       sw += w; m[0] += w * s.r[i]; m[1] += w * s.g[i]; m[2] += w * s.b[i];
@@ -81,6 +85,7 @@
       cv[1][1] += w * d1 * d1; cv[1][2] += w * d1 * d2; cv[2][2] += w * d2 * d2;
       lab = C.srgbToOklab([s.r[i], s.g[i], s.b[i]]);
       cs += w * Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+      rcs += w * Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]) / Math.max(0.1, lab[0]);
       labSum[0] += w * lab[0]; labSum[1] += w * lab[1]; labSum[2] += w * lab[2];
       Ls.push(lab[0]);
       lumas.push(0.2126 * s.r[i] + 0.7152 * s.g[i] + 0.0722 * s.b[i]);
@@ -91,7 +96,7 @@
     lumas.sort(function (a, b) { return a - b; });
     function q(arr, p) { return arr.length ? arr[Math.min(arr.length - 1, Math.floor(p * (arr.length - 1) + 0.5))] : 0; }
     return {
-      n: n, mean: m, cov: cv, meanChroma: cs / sw,
+      n: n, mean: m, cov: cv, meanChroma: cs / sw, meanRelChroma: rcs / sw,
       meanLab: [labSum[0] / sw, labSum[1] / sw, labSum[2] / sw],
       L: { p5: q(Ls, 0.05), p20: q(Ls, 0.2), p50: q(Ls, 0.5), p95: q(Ls, 0.95), p99: q(Ls, 0.99) },
       luma: { p5: q(lumas, 0.05), p50: q(lumas, 0.5), p95: q(lumas, 0.95), p99: q(lumas, 0.99) },
@@ -213,6 +218,52 @@
     return len > maxLen ? [v[0] * maxLen / len, v[1] * maxLen / len] : v;
   }
 
+  /** Scale the color-moving parts of params toward identity by s (0..1). */
+  function scaleColorParams(p, s) {
+    var mb = L.affineBlend(p.mkl.A, p.mkl.b, s);
+    return {
+      wbStops: [p.wbStops[0] * s, p.wbStops[1] * s, p.wbStops[2] * s],
+      ev: p.ev,
+      lift: p.lift,
+      gamma: [Math.pow(p.gamma[0], s), Math.pow(p.gamma[1], s), Math.pow(p.gamma[2], s)],
+      gain: [1 - (1 - p.gain[0]) * s, 1 - (1 - p.gain[1]) * s, 1 - (1 - p.gain[2]) * s],
+      sat: Math.pow(p.sat, s),
+      contrast: p.contrast,
+      pivot: p.pivot,
+      mkl: { A: mb.A, b: mb.b }
+    };
+  }
+
+  function skinCheck(p, k, skin0, o) {
+    var out = FX.applyChain(skin0, FX.chainSettings(p, k));
+    var l0 = C.srgbToOklab(skin0), l1 = C.srgbToOklab(out);
+    // compare lightness-relative chroma (C/L): exposure alone must not trip the guard
+    var c0 = Math.sqrt(l0[1] * l0[1] + l0[2] * l0[2]) / Math.max(0.1, l0[0]);
+    var c1 = Math.sqrt(l1[1] * l1[1] + l1[2] * l1[2]) / Math.max(0.1, l1[0]);
+    var dh = C.hueDiff(C.hueDeg(l0[1], l0[2]), C.hueDeg(l1[1], l1[2]));
+    var ok = Math.abs(dh) <= cfgGet(o, "skinMaxHueShift") &&
+      c1 >= Math.max(0.02, c0 * cfgGet(o, "skinMinChromaRatio")) &&
+      c1 <= c0 * cfgGet(o, "skinMaxChromaRatio") + 0.01;
+    return { ok: ok, hueShift: dh, chroma0: c0, chroma1: c1, rgb: out };
+  }
+
+  /** Skin keeper (solve-time): binary-search the largest scale that keeps skin natural. */
+  function skinGuard(params, k, ch, o) {
+    if (!ch.skin || !ch.skin.rgb || ch.skin.fraction < 0.005) { return { params: params, info: null }; }
+    var skin0 = ch.skin.rgb;
+    var r = skinCheck(params, k, skin0, o);
+    if (r.ok) { return { params: params, info: { scale: 1, hueShift: r.hueShift, chroma: [r.chroma0, r.chroma1] } }; }
+    var lo = 0, hi = 1, i, mid, rr;
+    for (i = 0; i < 10; i++) {
+      mid = (lo + hi) / 2;
+      rr = skinCheck(scaleColorParams(params, mid), k, skin0, o);
+      if (rr.ok) { lo = mid; } else { hi = mid; }
+    }
+    var p2 = scaleColorParams(params, lo);
+    var r2 = skinCheck(p2, k, skin0, o);
+    return { params: p2, info: { scale: lo, hueShift: r2.hueShift, chroma: [r2.chroma0, r2.chroma1], unguardedHueShift: r.hueShift } };
+  }
+
   /**
    * solve(bg, ch, samples, opts)
    *   bg: { global: region, ring: region | null }   (core/stats region objects)
@@ -248,21 +299,34 @@
     var s1 = mapSamples(samples, function (c) { return FX.exposure(c, expoFull); });
     var d1 = describe(s1);
 
-    /* 3. lift (line-art tint), guarded so lines stay darker than fills */
+    /* 3. lift (line-art tint), guarded so lines stay clearly darker than fills:
+          after lifting BOTH, the line/dark-fill lightness gap must keep at least
+          lineContrastKeep of its original size. */
     var black = (R.black && R.black.rgb) ? R.black.rgb : [0, 0, 0];
     var cap = cfgGet(o, "liftCap");
     var lift = [Math.min(cap, black[0]), Math.min(cap, black[1]), Math.min(cap, black[2])];
     var line0 = FX.exposure((ch.lineArt && ch.lineArt.rgb) ? ch.lineArt.rgb : [0.08, 0.08, 0.08], expoFull);
-    var Lline0 = C.srgbToOklab(line0)[0];
-    var lifted = [lift[0] + (1 - lift[0]) * line0[0], lift[1] + (1 - lift[1]) * line0[1], lift[2] + (1 - lift[2]) * line0[2]];
-    var Lline = C.srgbToOklab(lifted)[0];
-    var Lmax = d1.L.p20 - cfgGet(o, "lineMargin");
-    var liftScale = 1;
-    if (Lline > Lmax && Lline > Lline0 + 1e-6) {
-      liftScale = clamp((Lmax - Lline0) / (Lline - Lline0), 0, 1);
+    var fillL = d1.L.p20;
+    var fillLin = Math.pow(Math.max(0, fillL), 3);
+    var fill0 = [C.linearToSrgb(fillLin), C.linearToSrgb(fillLin), C.linearToSrgb(fillLin)]; // dark fill as a gray
+    function liftOf(c, lf) { return [lf[0] + (1 - lf[0]) * c[0], lf[1] + (1 - lf[1]) * c[1], lf[2] + (1 - lf[2]) * c[2]]; }
+    var gap0 = C.srgbToOklab(fill0)[0] - C.srgbToOklab(line0)[0];
+    var keep = cfgGet(o, "lineContrastKeep");
+    var liftScale = 1, lo2 = 0, hi2 = 1, it2, m2, gp;
+    function gapAt(sc) {
+      var lf = [lift[0] * sc, lift[1] * sc, lift[2] * sc];
+      return C.srgbToOklab(liftOf(fill0, lf))[0] - C.srgbToOklab(liftOf(line0, lf))[0];
+    }
+    if (gap0 > 1e-3 && gapAt(1) < keep * gap0) {
+      for (it2 = 0; it2 < 12; it2++) {
+        m2 = (lo2 + hi2) / 2;
+        gp = gapAt(m2);
+        if (gp >= keep * gap0) { lo2 = m2; } else { hi2 = m2; }
+      }
+      liftScale = lo2;
       lift = [lift[0] * liftScale, lift[1] * liftScale, lift[2] * liftScale];
     }
-    steps.lift = { black: black, lift: lift, guardScale: liftScale, lineL: Lline0, fillP20: d1.L.p20 };
+    steps.lift = { black: black, lift: lift, guardScale: liftScale, lineL: C.srgbToOklab(line0)[0], fillP20: fillL, gap0: gap0, gap1: gapAt(1) }; // gapAt sees the final (scaled) lift
 
     /* 4. midtone tint: residual of the ring's mid band vs the illuminant, per-channel gamma */
     var illumRel = relTint(C.linearToOklab(Ebg));
@@ -296,13 +360,15 @@
     var s2 = mapSamples(s1, function (c2) { return FX.levels(c2, lv); });
     var d2 = describe(s2);
 
-    /* 6. saturation (luma-preserving matrix) */
-    var targetC = R.meanChroma * cfgGet(o, "rho");
-    var satMeasured = d2.meanChroma > 1e-4 ? clamp(targetC / d2.meanChroma, cfgGet(o, "satMin"), cfgGet(o, "satMax")) : 1;
+    /* 6. saturation (luma-preserving matrix), compared as lightness-relative chroma C/L
+          so darkening by EV does not read as "less saturated" */
+    var ringRC = R.meanRelChroma !== undefined ? R.meanRelChroma : R.meanChroma / Math.max(0.1, R.meanLab[0]);
+    var targetC = ringRC * cfgGet(o, "rho");
+    var satMeasured = d2.meanRelChroma > 1e-4 ? clamp(targetC / d2.meanRelChroma, cfgGet(o, "satMin"), cfgGet(o, "satMax")) : 1;
     var classSat = (opts && opts.classSat) || 1;
     var cw = cfgGet(o, "classSatWeight");
     var sat = Math.exp((1 - cw) * Math.log(satMeasured) + cw * Math.log(classSat));
-    steps.sat = { target: targetC, current: d2.meanChroma, measured: satMeasured, classPrior: classSat, sat: sat };
+    steps.sat = { target: targetC, current: d2.meanRelChroma, measured: satMeasured, classPrior: classSat, sat: sat };
 
     /* 7. contrast around the character's median luma */
     var rangeBg = (R.L.p95 - R.L.p5), rangeCh = (d2.L.p95 - d2.L.p5);
@@ -325,9 +391,19 @@
 
     /* guards on the prediction at the requested strengths */
     var k = (opts && opts.strengths) || { wb: 1, ev: 1, lift: 1, gamma: 1, gain: 1, sat: 1, contrast: 1, harmony: 0.25 };
+    var before = describe(samples);
+
+    // (a) skin keeper: scale the color-moving steps back until the predicted skin
+    // keeps its hue (within skinMaxHueShift) and most of its chroma.
+    var skin = skinGuard(params, k, ch, o);
+    params = skin.params;
+
+    // (b) clip guard: no new per-channel clipping beyond clipMaxIncrease, luma p99 capped.
     var pred = predict(samples, params, k);
     var it = 0;
-    while (pred.luma.p99 > cfgGet(o, "clipP99") && pred.luma.p99 > describe(samples).luma.p99 && it < 20 && params.ev > cfgGet(o, "evMin")) {
+    while (it < 25 && params.ev > cfgGet(o, "evMin") &&
+           ((pred.clipFraction - before.clipFraction > cfgGet(o, "clipMaxIncrease")) ||
+            (pred.luma.p99 > cfgGet(o, "clipP99") && pred.luma.p99 > before.luma.p99))) {
       params.ev -= 0.1;
       pred = predict(samples, params, k);
       it++;
@@ -344,9 +420,37 @@
       params: params,
       steps: steps,
       predicted: pred,
-      before: describe(samples),
-      guards: { clipEvReduction: it * 0.1, readability: readability, ringUsed: ringOk }
+      before: before,
+      guards: { clipEvReduction: it * 0.1, skin: skin.info, readability: readability, ringUsed: ringOk }
     };
+  }
+
+  /**
+   * Effective per-step strengths (what the rig's expressions compute live):
+   * master * match * step, with step strengths from the class row (wb, lift, harmony)
+   * and from config.match (the rest).
+   */
+  function effectiveStrengths(cd, m, extras) {
+    var base = m.masterStrength * m.matchStrength;
+    var evk = (extras && extras.ev !== undefined) ? extras.ev : 1;
+    return {
+      wb: base * cd.wb,
+      ev: base * m.evStrength * evk,
+      lift: base * cd.lift,
+      gamma: base * m.gammaStrength,
+      gain: base * m.gainStrength,
+      sat: base * m.satStrength,
+      contrast: base * m.contrastStrength,
+      harmony: base * cd.harmony
+    };
+  }
+
+  /** config.transfer merged with config.classExtras[cls].transfer. */
+  function classTransferConfig(cls, config) {
+    var out = {}, k, ex = config.classExtras && config.classExtras[cls] ? config.classExtras[cls].transfer : null;
+    for (k in config.transfer) { if (config.transfer.hasOwnProperty(k)) { out[k] = config.transfer[k]; } }
+    if (ex) { for (k in ex) { if (ex.hasOwnProperty(k)) { out[k] = ex[k]; } } }
+    return out;
   }
 
   /** Predict sample statistics after the chain at strengths k. */
@@ -363,6 +467,10 @@
     reinhardAffine: reinhardAffine,
     capChroma: capChroma,
     solve: solve,
+    scaleColorParams: scaleColorParams,
+    skinGuard: skinGuard,
+    effectiveStrengths: effectiveStrengths,
+    classTransferConfig: classTransferConfig,
     predict: predict
   };
 }));

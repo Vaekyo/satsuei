@@ -30,7 +30,7 @@
     emitterChroma: 0.14,
     emitterMinL: 0.55,
     sogPower: 6,
-    illumKeyBlend: 0.5,
+    illumKeyBlend: 0.7,
     ringFrac: 0.08,
     coreAlpha: 0.95,
     blobPct: 0.02
@@ -709,8 +709,9 @@
 
   /** Skin estimate: Oklab hue window, moderate chroma, high lightness (tunable). */
   function skin(P, sampleIdx, wts, o) {
-    var h0 = (o && o.skinHue) ? o.skinHue[0] : 25, h1 = (o && o.skinHue) ? o.skinHue[1] : 80;
-    var c0 = 0.02, c1 = 0.13, l0 = 0.7;
+    // hue 25..75 deg, chroma 0.02..0.10: excludes blonde (~88 deg, C ~0.10+) and pink hair
+    var h0 = (o && o.skinHue) ? o.skinHue[0] : 25, h1 = (o && o.skinHue) ? o.skinHue[1] : 75;
+    var c0 = 0.02, c1 = 0.10, l0 = 0.7;
     var sw = 0, s = [0, 0, 0], tot = 0, k, i, lab, ch, hu, x, y, bx0 = 1, by0 = 1, bx1 = 0, by1 = 0;
     for (k = 0; k < sampleIdx.length; k++) {
       i = sampleIdx[k];
@@ -753,12 +754,14 @@
     var idx = sampleIndices(wts, opt(o, "maxSamples"));
     var mw = moments3(P.r, P.g, P.b, wts);
     var ml = moments3(P.lr, P.lg, P.lb, wts);
-    var labSum = [0, 0, 0], cSum = 0, sw = 0, k, i, lab, wv;
+    var labSum = [0, 0, 0], cSum = 0, rcSum = 0, sw = 0, k, i, lab, wv, cc;
     for (k = 0; k < idx.length; k++) {
       i = idx[k]; wv = wts[i];
       lab = oklabAt(P, i);
       labSum[0] += wv * lab[0]; labSum[1] += wv * lab[1]; labSum[2] += wv * lab[2];
-      cSum += wv * Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+      cc = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+      cSum += wv * cc;
+      rcSum += wv * cc / Math.max(0.1, lab[0]);
       sw += wv;
     }
     var key = keyColor(P, wts, hist, o);
@@ -770,6 +773,7 @@
       meanLin: ml.mean, covLin: ml.cov,
       meanLab: [labSum[0] / sw, labSum[1] / sw, labSum[2] / sw],
       meanChroma: cSum / sw,
+      meanRelChroma: rcSum / sw, // mean C/L (lightness-independent "saturation")
       L: pct,
       medianY: yMed,
       meanY: C.luminance(ml.mean),
