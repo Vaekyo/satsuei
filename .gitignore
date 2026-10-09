@@ -7,3 +7,6 @@ dist/*
 *.log
 .DS_Store
 Thumbs.db
+# generated backgrounds are large (~110 MB with the fire sequence); regenerate with
+# `npm run assets` (deterministic). Characters, manifest and assets/ are committed.
+test_assets/synthetic/backgrounds/

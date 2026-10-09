@@ -1,0 +1,8 @@
+{
+ "N": 65,
+ "cols": 9,
+ "rows": 8,
+ "width": 585,
+ "height": 520,
+ "rule": "pixel (tx*N + r, ty*N + g) of tile b=(ty*cols+tx) holds (r, g, b)/(N-1)"
+}

@@ -1,0 +1,168 @@
+{
+ "generator": "tools/make_test_assets.js",
+ "note": "Synthetic, original, deterministic.",
+ "characters": [
+  {
+   "id": "brunette_red",
+   "file": "test_assets/synthetic/characters/brunette_red.png",
+   "alpha": "straight",
+   "w": 1200,
+   "h": 1600
+  },
+  {
+   "id": "blonde_white",
+   "file": "test_assets/synthetic/characters/blonde_white.png",
+   "alpha": "straight",
+   "w": 1200,
+   "h": 1600
+  },
+  {
+   "id": "black_navy",
+   "file": "test_assets/synthetic/characters/black_navy.png",
+   "alpha": "straight",
+   "w": 1200,
+   "h": 1600
+  },
+  {
+   "id": "pastel_pink",
+   "file": "test_assets/synthetic/characters/pastel_pink.png",
+   "alpha": "straight",
+   "w": 1200,
+   "h": 1600
+  },
+  {
+   "id": "brunette_red_premult",
+   "file": "test_assets/synthetic/characters/brunette_red_premult.png",
+   "alpha": "premultiplied-on-black (wrong on purpose)",
+   "variantOf": "brunette_red"
+  },
+  {
+   "id": "blonde_white_greenscreen",
+   "file": "test_assets/synthetic/characters/blonde_white_greenscreen.png",
+   "alpha": "none (green screen #00B140)",
+   "variantOf": "blonde_white"
+  },
+  {
+   "id": "brunette_red_tightcrop",
+   "file": "test_assets/synthetic/characters/brunette_red_tightcrop.png",
+   "alpha": "straight",
+   "variantOf": "brunette_red",
+   "w": 852,
+   "h": 1414
+  }
+ ],
+ "backgrounds": [
+  {
+   "id": "day_sky",
+   "file": "test_assets/synthetic/backgrounds/day_sky.png",
+   "light": {
+    "angle": 315,
+    "key": "neutral-warm",
+    "note": "sun upper left"
+   }
+  },
+  {
+   "id": "golden_hour",
+   "file": "test_assets/synthetic/backgrounds/golden_hour.png",
+   "light": {
+    "angle": 90,
+    "key": "warm",
+    "note": "low sun right"
+   }
+  },
+  {
+   "id": "twilight",
+   "file": "test_assets/synthetic/backgrounds/twilight.png",
+   "light": {
+    "angle": 0,
+    "key": "cool-magenta",
+    "note": "diffuse sky, low contrast"
+   }
+  },
+  {
+   "id": "night_street",
+   "file": "test_assets/synthetic/backgrounds/night_street.png",
+   "light": {
+    "angle": 300,
+    "key": "warm lamps on cool ambient",
+    "note": "nearest lamp upper left"
+   }
+  },
+  {
+   "id": "neon_alley",
+   "file": "test_assets/synthetic/backgrounds/neon_alley.png",
+   "light": {
+    "angle": 270,
+    "key": "magenta/cyan emitters",
+    "note": "dark, saturated emitters"
+   }
+  },
+  {
+   "id": "overcast_rain",
+   "file": "test_assets/synthetic/backgrounds/overcast_rain.png",
+   "light": {
+    "angle": 0,
+    "key": "neutral-cool, diffuse",
+    "note": "low contrast, low chroma"
+   }
+  },
+  {
+   "id": "snow",
+   "file": "test_assets/synthetic/backgrounds/snow.png",
+   "light": {
+    "angle": 330,
+    "key": "cool white",
+    "note": "high key"
+   }
+  },
+  {
+   "id": "warm_interior",
+   "file": "test_assets/synthetic/backgrounds/warm_interior.png",
+   "light": {
+    "angle": 75,
+    "key": "tungsten ~2800K",
+    "note": "floor lamp right"
+   }
+  },
+  {
+   "id": "underwater",
+   "file": "test_assets/synthetic/backgrounds/underwater.png",
+   "light": {
+    "angle": 0,
+    "key": "teal, red absorbed",
+    "note": "light from the surface"
+   }
+  },
+  {
+   "id": "black",
+   "file": "test_assets/synthetic/backgrounds/black.png",
+   "light": null
+  },
+  {
+   "id": "white",
+   "file": "test_assets/synthetic/backgrounds/white.png",
+   "light": null
+  },
+  {
+   "id": "magenta_abstract",
+   "file": "test_assets/synthetic/backgrounds/magenta_abstract.png",
+   "light": null
+  },
+  {
+   "id": "noisy",
+   "file": "test_assets/synthetic/backgrounds/noisy.png",
+   "light": null
+  },
+  {
+   "id": "fire_lit",
+   "sequence": "test_assets/synthetic/backgrounds/fire_lit/fire_lit_[####].png",
+   "frames": 48,
+   "fps": 24,
+   "light": {
+    "angle": 110,
+    "key": "fire ~1900K, flickering",
+    "note": "campfire lower right"
+   }
+  }
+ ]
+}
