@@ -14,9 +14,12 @@ contrast, atmosphere, edge light and texture. A finishing Look goes on top.
   installed**. No third-party plugins are required.
 - Targets After Effects 2023 (23.0) and newer, on Windows and macOS.
 
-> **Status: early development (Phase 0/1).** The core math, PNG decoder, tooling and
-> synthetic test assets are in place. The AE panel is a placeholder, and AUTO COMP
-> arrives in Phase 2. See `docs/reports/`.
+> **Status: early development (Phase 0/1).** The analysis and color-matching math, the
+> scene classifier, the PNG decoder, the AE bridge tooling and the synthetic test assets
+> are in place and tested in Node. The AE-side analyzer is written but has not run on AE
+> yet. The panel is a placeholder, and AUTO COMP arrives in Phase 2. See `docs/reports/`.
+
+![Synthetic test assets](docs/img/synthetic_assets.png)
 
 ## For developers
 

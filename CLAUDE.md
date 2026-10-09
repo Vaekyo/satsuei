@@ -19,8 +19,11 @@ node tools/ae.js run tests/ae/ping.jsx          # run a script inside AE (Win/ma
 node tools/ae.js eval "app.version"
 node tools/ae.js run tools/dump_catalog.jsx     # writes catalog/effects_<maj>.<min>.json
 node tools/ae.js render --project x.aep --comp "C" --frame 0 --out tests/out/f.png
-node tools/analyze_ref.js <bg.png> <char.png>   # Node reference stats (see below)
-node tools/sim_preview.js                       # simulated match contact sheets
+node tools/analyze_ref.js [<bg.png> [<char.png>]]  # Node reference stats + classifier table
+node tools/sim_preview.js [--char all]          # simulated match: metrics + tests/out/sheets/
+node tools/golden_classifier.js                 # refresh tests/golden/classifier_features.json
+node tools/ae.js run tests/ae/phase1_acceptance.jsx --timeout 900   # AE side of Phase 1
+node tools/compare_ref.js                       # AE results vs Node reference
 ```
 
 ## Layout
@@ -79,5 +82,17 @@ node tools/sim_preview.js                       # simulated match contact sheets
 
 ## Status
 
-See `docs/reports/PHASE_*.md`. The first session ran on Linux without AE (D-001):
-anything marked UNVERIFIED in `docs/DECISIONS.md` needs an AE probe.
+See `docs/reports/PHASE_*.md`. The first session ran on Linux without AE (D-001).
+Phase 0 and Phase 1 are done except for the steps that need AE; anything marked
+UNVERIFIED in `docs/DECISIONS.md` (probes P-01…P-18) needs an AE run. Next session:
+on a machine with AE, run the "How to finish Phase 1" list in `docs/reports/PHASE_1.md`,
+then start Phase 2 (rig builder) using the generated catalog.
+
+## Gotchas found so far
+
+- Shades-of-gray with p=6 is dominated by one neon sign: exclude emitters (D-011/stats).
+- McCamy CCT is garbage for off-locus illuminants (magenta → 1000 K): use Oklab hue.
+- Oklab chroma scales with lightness: compare saturation as C/L, or darkening reads as
+  desaturation (affects saturation match and the skin keeper).
+- Analysis-resolution (384 px) buffers average away grain and thin neon tubes: grain must
+  be measured on full-res crops; emitter thresholds are tuned for downscaled tubes.

@@ -118,6 +118,77 @@ space with x to the right and y down. Helpers: `linalg.vecToAeAngle`,
 `linalg.aeAngleToVec`. That AE's angle params really use this convention is
 **UNVERIFIED** (probe Drop Shadow Direction / Gradient Ramp points).
 
+## D-010 · Generated backgrounds are not committed — DECISION
+
+The synthetic backgrounds are noisy by design (paint texture + grain), so they compress
+badly: ~25 MB of stills plus ~85 MB for the 48-frame fire sequence. They are deterministic,
+so `npm run assets` regenerates them in ~1.5 min. Committed: the characters (1.2 MB), the
+manifest, everything shipped in `assets/` (calibration chart, HALD 8, exact 65³ lattice), and
+a contact sheet (`docs/img/synthetic_assets.png`).
+
+## D-011 · Solver defaults retuned from simulated contact sheets — DECISION (2026-10-09)
+
+The first simulated run (`tools/sim_preview.js`, Node models of the AE effects) with the
+spec's starting values showed the failure modes §2 warns about: grey/white "muddy" skin in
+day, snow, overcast and neon; cyan skin underwater; lemon-yellow skin plus 10% new clipping
+at golden hour; and a −1.4 EV darkening on a pure-black void. Changes, each confirmed on the
+sheets:
+
+| Constant | Spec start | Now | Why |
+|---|---|---|---|
+| illuminant = SoG ↔ key blend | (blend) | key weight 0.7 | SoG reads blue sky / green grass as light |
+| max illuminant chroma | — | 0.08 (Oklab) | caps casts that come from scene colors |
+| EV `Y_ref` / max | — / +1.0 | 0.18 / +0.3 | bright scenes washed faces out |
+| saturation measure | absolute chroma | C/L | darkening read as desaturation |
+| sat ρ / clamp | 1.15 / [0.6, 1.2] | 1.4 / [0.75, 1.15] | cels are inherently more saturated than painted BGs |
+| line-art guard | "lines darker than fills" | keep ≥ 60% of the line/fill lightness gap after lifting both | the naive guard zeroed the lift everywhere |
+| new: skin keeper (solve-time) | optional | on: hue ±25°, C/L ≥ 0.8× | grey and cyan skin |
+| new: clip guard per channel | luma p99 | + ≤ 0.5% new per-channel clipping | white-dress test |
+| VOID classes | — | exposure match off | a void is not a night scene |
+
+Result on 4 characters × 14 scenes: no pair adds more than 0.5% clipping, skin hue/chroma
+stays in range everywhere, and illuminant tint agreement improves in 55 of 56 pairs (the
+exception is blonde in the neon alley, 0.016 → 0.025). **These are uncalibrated
+predictions**: re-check against real AE renders once calibration (P-10) exists.
+
+## D-012 · Saturation & contrast live in the Channel Mixer — DECISION (verify P-16)
+
+The spec suggests Hue/Saturation or Vibrance for step 6. A luma-preserving saturation
+matrix and contrast-around-pivot are both exactly affine. Folded into the same Channel
+Mixer as the MKL harmony, they give a predictable chain (Exposure → Levels → Channel Mixer)
+with one fewer effect to calibrate. The expressions compose `MKL_h ∘ Contrast_k ∘ Sat_k` at
+render time, so every strength stays live. Risk: the Channel Mixer may not run at 32 bpc
+(P-16). Fallback: Hue/Saturation master + skip harmony.
+
+## D-013 · Skin keeper first at solve-time, per-pixel later — DECISION
+
+The solve-time keeper scales all color-moving steps together, which is simple, predictable
+and data-only. It costs some match strength in scenes whose light rotates skin hue. A
+per-pixel keeper (keyed counter-tint) remains a Phase 3 option for stronger looks.
+
+## D-014 · Classifier features — DECISION
+
+- Warmth comes from the illuminant's Oklab hue/chroma, not CCT. McCamy's CCT returned
+  1000 K for the magenta abstract scene and classified it GOLDEN.
+- Emitters are split into warm (fire/lamps) vs other (neon). The thresholds (L ≥ 0.45,
+  C ≥ 0.12) work for thin tubes at analysis resolution.
+- "Cool sky" (fraction of blue/purple/pink pixels in the upper third) separates golden hour
+  from a warm interior.
+- These are tuned on synthetic scenes only: expect retuning on real frames.
+
+## D-015 · Exposure carries WB and EV per channel — UNVERIFIED (P-17)
+
+Assumption: with Channels = Individual Channels, Exposure ignores its master controls. So
+each channel's stops expression adds WB and EV:
+`stops_c = wb_c·k_wb + ev·k_ev`.
+
+## D-016 · Analysis isolation by solo — UNVERIFIED (P-05, P-15)
+
+The backends nest the main comp in a temporary analysis comp and isolate roles by soloing
+inside the main comp. If AE does not honor solo inside a nested comp, the fallback is to
+toggle `enabled` on all non-role layers instead (same snapshot/restore code). The behavior of
+track mattes under solo is P-15.
+
 ## Open probes (run on a real AE, then record results here)
 
 | # | Probe | Spec ref |
@@ -136,3 +207,7 @@ space with x to the right and y down. Helpers: `linalg.vecToAeAngle`,
 | P-12 | Expression references survive layer/effect renames | gotcha 7 |
 | P-13 | AE Direction angle convention | D-009 |
 | P-14 | Output-module template for PNG from script (`setSettings` keys) | §10.1 |
+| P-15 | Track mattes still apply when only the matted layer is soloed (legacy + AE 23 mattes) | §6.2 |
+| P-16 | Channel Mixer bit-depth support (32 bpc?) and value ranges | §6.5 |
+| P-17 | Exposure "Individual Channels" ignores master; linearization curve | §6.5 |
+| P-18 | `Layer.id`, `sourcePointToComp`, `Folder.create` of nested paths | §6.6 |
