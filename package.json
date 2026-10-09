@@ -1,0 +1,27 @@
+{
+  "name": "satsuei",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SATSUEI - auto-compositing & look toolkit for Adobe After Effects (built-in effects only)",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "npm run lint && npm run unit",
+    "unit": "node --test \"tests/node/**/*.test.js\"",
+    "lint": "eslint .",
+    "build": "node tools/bundle.js",
+    "assets": "node tools/make_test_assets.js",
+    "doctor": "node tools/ae.js doctor",
+    "ae": "node tools/ae.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "ajv": "^8.20.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-es-x": "^10.0.1",
+    "globals": "^17.13.0",
+    "pngjs": "^7.0.0"
+  }
+}

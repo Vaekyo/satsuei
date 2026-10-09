@@ -1,0 +1,9 @@
+node_modules/
+tests/out/
+test_assets/private/
+dist/*
+!dist/.gitkeep
+*.aep.bak
+*.log
+.DS_Store
+Thumbs.db
