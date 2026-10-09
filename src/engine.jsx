@@ -10,6 +10,9 @@
 //@include "core/halton.js"
 //@include "core/png.js"
 //@include "core/stats.js"
+//@include "core/fxmodel.js"
+//@include "core/transfer.js"
+//@include "core/classify.js"
 //@include "ae/env.js"
 
 (function () {

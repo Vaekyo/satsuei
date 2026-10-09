@@ -35,7 +35,7 @@ test("bundles parse as ES3 and load in a simulated ExtendScript global", () => {
   const S = sandbox.SATSUEI;
   assert.ok(S, "SATSUEI global defined");
   assert.match(S.VERSION, /^\d+\.\d+\.\d+\+/);
-  for (const k of ["color", "linalg", "halton", "png", "stats"]) assert.equal(typeof S.core[k], "object", k);
+  for (const k of ["color", "linalg", "halton", "png", "stats", "fxmodel", "transfer", "classify"]) assert.equal(typeof S.core[k], "object", k);
   assert.equal(typeof S.json.parse, "function");
   assert.equal(typeof S.ae.env.info, "function");
   assert.equal(S.json.stringify({ a: [1] }), "{\"a\":[1]}");

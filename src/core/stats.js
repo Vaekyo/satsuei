@@ -540,7 +540,7 @@
   /* ------------------------------------------------------------------ */
 
   function bandContrast(P, y0, y1, sampleStep) {
-    var wts = new Array(P.n), i, x, y, s = sampleStep || 1, labC = 0, cnt = 0;
+    var wts = new Array(P.n), i, x, y, s = sampleStep || 1, labC = 0, cnt = 0, cool = 0, hu, cc;
     for (i = 0; i < P.n; i++) { wts[i] = 0; }
     for (y = y0; y < y1; y++) {
       for (x = 0; x < P.w; x++) {
@@ -548,13 +548,21 @@
         wts[i] = 1;
         if ((x + y) % s === 0) {
           var lab = oklabAt(P, i);
-          labC += Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+          cc = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+          labC += cc;
           cnt++;
+          hu = C.hueDeg(lab[1], lab[2]);
+          if (cc > 0.03 && (hu >= 200 || hu < 10)) { cool++; }
         }
       }
     }
     var hist = histogram(P.Lr, wts, 256, 0, 1);
-    return { contrast: percentile(hist, 0.95) - percentile(hist, 0.05), chroma: cnt ? labC / cnt : 0, meanL: percentile(hist, 0.5) };
+    return {
+      contrast: percentile(hist, 0.95) - percentile(hist, 0.05),
+      chroma: cnt ? labC / cnt : 0,
+      meanL: percentile(hist, 0.5),
+      coolFraction: cnt ? cool / cnt : 0  // blue/purple/pink pixels: a visible sky
+    };
   }
 
   /** Atmospheric haze proxy: contrast and chroma of the upper vs lower thirds. */
@@ -780,18 +788,29 @@
     return rg;
   }
 
-  /** Fraction of pixels that are bright, saturated emitters (neon detector). */
-  function emitterFraction(P, wts, idx) {
-    var k, i, lab, ch, hit = 0, tot = 0;
+  /**
+   * Bright saturated "emitter" pixels (neon detector), split by hue: warm (orange/
+   * yellow, hue 20..110 deg: fire, lamps) vs other (magenta, cyan, green, blue: neon).
+   * Thresholds are low enough for thin tubes after downscaling to analysis size.
+   */
+  function emitters(P, wts, idx, o) {
+    var minL = (o && o.emitterMinL2 !== undefined) ? o.emitterMinL2 : 0.45;
+    var minC = (o && o.emitterMinC2 !== undefined) ? o.emitterMinC2 : 0.12;
+    var k, i, lab, ch, hu, warm = 0, other = 0, tot = 0;
     for (k = 0; k < idx.length; k++) {
       i = idx[k]; tot += wts[i];
-      if (P.Lr[i] < 0.6) { continue; }
+      if (P.Lr[i] < minL * 0.8) { continue; }
       lab = oklabAt(P, i);
+      if (lab[0] < minL) { continue; }
       ch = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
-      if (ch > 0.15) { hit += wts[i]; }
+      if (ch < minC) { continue; }
+      hu = C.hueDeg(lab[1], lab[2]);
+      if (hu >= 20 && hu <= 110) { warm += wts[i]; } else { other += wts[i]; }
     }
-    return tot > 0 ? hit / tot : 0;
+    return { all: tot > 0 ? (warm + other) / tot : 0, warm: tot > 0 ? warm / tot : 0, other: tot > 0 ? other / tot : 0 };
   }
+
+  function emitterFraction(P, wts, idx) { return emitters(P, wts, idx).all; }
 
   /**
    * Analyze a background buffer. chars: array of { id, alpha } (alpha planes in the
@@ -803,7 +822,8 @@
     var g = region(P, all, o);
     var res = { w: P.w, h: P.h, global: null, rings: [], light: null };
     var idx = g._idx;
-    res.emitterFraction = emitterFraction(P, all, idx);
+    res.emitters = emitters(P, all, idx, o);
+    res.emitterFraction = res.emitters.all;
     res.palette = palette(P, all, o);
     res.plane = planeFit(P, all);
     res.blob = brightBlob(P, all, o);
@@ -881,6 +901,7 @@
     skin: skin,
     edgeBand: edgeBand,
     region: function (P, w, o) { return strip(region(P, w, o)); },
+    emitters: emitters,
     emitterFraction: emitterFraction,
     analyzeBackground: analyzeBackground,
     analyzeCharacter: analyzeCharacter
