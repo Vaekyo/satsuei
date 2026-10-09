@@ -9,6 +9,7 @@
 //@include "core/linalg.js"
 //@include "core/halton.js"
 //@include "core/png.js"
+//@include "core/stats.js"
 //@include "ae/env.js"
 
 (function () {
